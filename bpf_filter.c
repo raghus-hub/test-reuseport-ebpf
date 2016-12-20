@@ -8,5 +8,5 @@
  */
 int bpf_socket_filter(struct __sk_buff *skb) {
 //  bpf_trace_printk("Hello, World!\\n");
-  return 2;
+  return 1;
 }

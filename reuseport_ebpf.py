@@ -42,13 +42,16 @@ def setup_socket(in_parent):
     listen_sock.setsockopt(socket.SOL_SOCKET, SO_ATTACH_REUSEPORT_EBPF, bpf_filter_fn.fd)
     print("Done")
 
-  # If bind and listen are not called in parent  the eBPF filter is not getting
-  # called. Error?
-  print("[pid %d] Binding the  Listening Socket on port %d..." %
-        (os.getpid(), args.listen_port), end='')
-  listen_sock.bind(('', args.listen_port))
-  listen_sock.listen(1)
-  print("Done")
+  # We cannot listen in_parent when eBPF filter is not attached as the parent
+  # is not equipped to process any connections
+  # If bind and listen are not called in parent the eBPF filter is not getting
+  # called. Error? Note: The filter prevents the parent from getting connections
+  if (args.enable_filter or not in_parent) :
+    print("[pid %d] Binding the  Listening Socket on port %d..." %
+          (os.getpid(), args.listen_port), end='')
+    listen_sock.bind(('', args.listen_port))
+    listen_sock.listen(1)
+    print("Done")
   return (listen_sock, bpf);
 
 def main_function(p_lock, n_kids):
@@ -84,7 +87,7 @@ if __name__ == '__main__':
     print("\n[pid %d] System Ready For Testing" % os.getpid()) 
     while mp.active_children():
       time.sleep(0.5)
-    bpf.trace_print()
+#    bpf.trace_print()
   except (KeyboardInterrupt, SystemExit):
     pass
   except:
