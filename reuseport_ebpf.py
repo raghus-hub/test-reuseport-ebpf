@@ -12,7 +12,7 @@ import argparse
 SO_ATTACH_REUSEPORT_EBPF=52
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--port', dest='listen_port', default=8888,
+parser.add_argument('--port', dest='listen_port', type=int, default=8888,
                     help='Listening port for the echo server [default: 8888]')
 parser.add_argument('--enable-filter', dest='enable_filter',
                     action='store_true',

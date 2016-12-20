@@ -7,7 +7,7 @@ import socket
 parser = argparse.ArgumentParser()
 parser.add_argument('--ip', dest='dest_ip', default='localhost',
                     help='Server IP to connect to [default: localhost]')
-parser.add_argument('--port', dest='dest_port', default=8888,
+parser.add_argument('--port', dest='dest_port', type=int, default=8888,
                     help='Server port to connect to [default: 8888]')
 parser.add_argument('--count', dest='count', default=20,
                     help='Number of connections (echo requests) to try [default: 20]')
