@@ -28,34 +28,29 @@ def process_function(p_lock, n_kids):
   except:
     raise
 
-def setup_socket(in_parent):
+def setup_socket(child_id):
   listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
   bpf = ()
-  # Doing the follwoing in children screws up the REUSEPORT options on teh socket and 
-  # calling bind multiple times will result in EADDRINUSE Error. This issues
-  # does not happen if EBPF filter is not being added
-  if (args.enable_filter and in_parent) :
+  # Doing the following in multiple children screws up the REUSEPORT options on the socket and 
+  # calling bind multiple times will result in EADDRINUSE Error. This issue
+  # does not happen if EBPF filter is not being added (TBD: Need to debug this.. kernel issue?)
+  if (args.enable_filter and child_id == 0) :
     print("[pid %d] Loading the BPF Program..." % os.getpid(), end='')
     bpf = BPF(src_file="bpf_filter.c", debug = 0)
     bpf_filter_fn = bpf.load_func("bpf_socket_filter", BPF.SOCKET_FILTER)
     listen_sock.setsockopt(socket.SOL_SOCKET, SO_ATTACH_REUSEPORT_EBPF, bpf_filter_fn.fd)
     print("Done")
 
-  # We cannot listen in_parent when eBPF filter is not attached as the parent
-  # is not equipped to process any connections
-  # If bind and listen are not called in parent the eBPF filter is not getting
-  # called. Error? Note: The filter prevents the parent from getting connections
-  if (args.enable_filter or not in_parent) :
-    print("[pid %d] Binding the  Listening Socket on port %d..." %
-          (os.getpid(), args.listen_port), end='')
-    listen_sock.bind(('', args.listen_port))
-    listen_sock.listen(1)
-    print("Done")
+  print("[pid %d] Binding the  Listening Socket on port %d..." %
+        (os.getpid(), args.listen_port), end='')
+  listen_sock.bind(('', args.listen_port))
+  listen_sock.listen(5)
+  print("Done")
   return (listen_sock, bpf);
 
 def main_function(p_lock, n_kids):
-  (listen_sock, junk)  = setup_socket(False)
+  (listen_sock, junk)  = setup_socket(n_kids.value)
   n_kids.value = n_kids.value+1
   print('[Server pid: %d] Ready' % os.getpid())
   # Process the connections 
@@ -71,11 +66,9 @@ def main_function(p_lock, n_kids):
     conn.send(data)
     conn.close()
 
-
 if __name__ == '__main__':
-  # Synchronize prints done in the 2 processes
+  # Synchronize prints done in the 2 processes using mp.Lock
   try:
-    (junk, bpf) = setup_socket(True)
     print("[pid: %d] Parent Ready\n" % os.getpid())
 
     lock = mp.Lock()
@@ -86,8 +79,7 @@ if __name__ == '__main__':
         time.sleep(0.1)
     print("\n[pid %d] System Ready For Testing" % os.getpid()) 
     while mp.active_children():
-      time.sleep(0.5)
-#    bpf.trace_print()
+      time.sleep(5)
   except (KeyboardInterrupt, SystemExit):
     pass
   except:
