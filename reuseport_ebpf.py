@@ -44,7 +44,11 @@ def setup_socket(child_id):
 
   print("[pid %d] Binding the  Listening Socket on port %d..." %
         (os.getpid(), args.listen_port), end='')
-  listen_sock.bind(('', args.listen_port))
+  try:
+    listen_sock.bind(('', args.listen_port))
+  except socket.error as msg:
+    print("Failed. Error(%s): %s" % (str(msg[0]),  msg[1]))
+    sys.exit()
   listen_sock.listen(5)
   print("Done")
   return (listen_sock, bpf);
@@ -74,9 +78,13 @@ if __name__ == '__main__':
     lock = mp.Lock()
     num_children = mp.Value('i', 0)
     for num in range(2):
-      mp.Process(target=process_function, args=(lock, num_children)).start()
+      proc = mp.Process(target=process_function, args=(lock, num_children))
+      proc.start()
       while (num_children.value == num):
         time.sleep(0.1)
+        if not proc.is_alive():
+          print("Child died before the system was ready... Exiting")
+          sys.exit()
     print("\n[pid %d] System Ready For Testing" % os.getpid()) 
     while mp.active_children():
       time.sleep(5)
