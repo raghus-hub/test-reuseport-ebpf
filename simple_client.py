@@ -9,7 +9,7 @@ parser.add_argument('--ip', dest='dest_ip', default='localhost',
                     help='Server IP to connect to [default: localhost]')
 parser.add_argument('--port', dest='dest_port', type=int, default=8888,
                     help='Server port to connect to [default: 8888]')
-parser.add_argument('--count', dest='count', default=10,
+parser.add_argument('--count', dest='count', type=int, default=10,
                     help='Number of connections (echo requests) to try [default: 20]')
 parser.add_argument('msg', default='ECHO', help='Message to send to the server') 
 args = parser.parse_args()
